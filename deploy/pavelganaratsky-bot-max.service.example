@@ -6,6 +6,7 @@
 Description=MAX bot (pavelganaratsky BOT 5)
 After=network-online.target
 Wants=network-online.target
+StartLimitIntervalSec=0
 
 [Service]
 Type=simple
@@ -17,7 +18,6 @@ ExecStart=/opt/pavelganaratsky-BOT-5-MAX/.venv/bin/python /opt/pavelganaratsky-B
 
 Restart=always
 RestartSec=10
-StartLimitIntervalSec=0
 
 # логи: journalctl -u pavelganaratsky-bot-max -f
 StandardOutput=journal
