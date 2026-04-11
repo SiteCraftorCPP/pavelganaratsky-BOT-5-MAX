@@ -1,0 +1,27 @@
+# Скопируйте в /etc/systemd/system/pavelganaratsky-bot-max.service
+# Замените пути и пользователя. Другие проекты на сервере не затрагиваются:
+# работает только из своего WorkingDirectory.
+
+[Unit]
+Description=MAX bot (pavelganaratsky BOT 5)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=DEPLOY_USER
+Group=DEPLOY_GROUP
+WorkingDirectory=/opt/pavelganaratsky-BOT-5-MAX
+EnvironmentFile=-/opt/pavelganaratsky-BOT-5-MAX/.env
+ExecStart=/opt/pavelganaratsky-BOT-5-MAX/.venv/bin/python /opt/pavelganaratsky-BOT-5-MAX/bot.py
+
+Restart=always
+RestartSec=10
+StartLimitIntervalSec=0
+
+# логи: journalctl -u pavelganaratsky-bot-max -f
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

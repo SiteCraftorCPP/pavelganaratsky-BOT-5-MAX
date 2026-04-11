@@ -1,0 +1,24 @@
+VPS: изоляция и автозапуск
+--------------------------
+
+1) Отдельная папка только для этого бота (не трогайте чужие каталоги):
+   sudo mkdir -p /opt/pavelganaratsky-BOT-5-MAX
+   sudo chown YOUR_USER:YOUR_USER /opt/pavelganaratsky-BOT-5-MAX
+   cd /opt/pavelganaratsky-BOT-5-MAX
+   git clone https://github.com/SiteCraftorCPP/pavelganaratsky-BOT-5-MAX.git .
+   (или клонируете во временную папку и mv содержимое — главное один каталог проекта)
+
+2) Виртуальное окружение и зависимости:
+   python3 -m venv .venv
+   .venv/bin/pip install -r requirements.txt
+   cp env.example .env && nano .env
+
+3) systemd (падение/убийство процесса — перезапуск):
+   sudo cp deploy/pavelganaratsky-bot-max.service.example /etc/systemd/system/pavelganaratsky-bot-max.service
+   Отредактируйте файл: User, Group, пути к каталогу, .venv и bot.py.
+   sudo systemctl daemon-reload
+   sudo systemctl enable --now pavelganaratsky-bot-max
+   sudo systemctl status pavelganaratsky-bot-max
+
+4) Логи:
+   journalctl -u pavelganaratsky-bot-max -f

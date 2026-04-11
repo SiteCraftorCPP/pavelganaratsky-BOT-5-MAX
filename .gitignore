@@ -19,3 +19,6 @@ __pycache__/
 .vscode/
 .DS_Store
 Thumbs.db
+
+# не используется в MAX-деплое
+pavelganaratsky BOT 5 TG/
