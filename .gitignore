@@ -1,0 +1,21 @@
+.env
+.env.*
+!.env.example
+
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+
+# локальные данные и логи
+*.db
+*.sqlite3
+*.log
+
+# IDE / ОС
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
