@@ -110,15 +110,13 @@ async def handle_update(client: MaxClient, update: dict) -> None:
             if mcid:
                 await set_user_dialog_chat(int(uid), mcid)
 
-        if payload in ("lang_ru", "lang_en"):
-            await user_flow.on_language_callback(
-                client, callback_id, int(uid), payload, recipient=msg.get("recipient") if msg else None
-            )
-            return
-
         if payload == "request_access":
             await user_flow.on_request_access_callback(
-                client, callback_id, uid, user_obj
+                client,
+                callback_id,
+                int(uid),
+                user_obj,
+                recipient=msg.get("recipient") if msg else None,
             )
             return
 

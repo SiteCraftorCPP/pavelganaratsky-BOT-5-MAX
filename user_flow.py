@@ -11,11 +11,7 @@ from database import (
     set_user_dialog_chat,
     set_user_language,
 )
-from keyboards import (
-    get_language_keyboard,
-    get_request_actions_keyboard,
-    get_welcome_keyboard,
-)
+from keyboards import get_request_actions_keyboard, get_welcome_keyboard
 from max_client import MaxClient, image_attachment_token, new_message_simple, recipient_chat_id
 from max_messages import actor_user_id, message_body_text
 
@@ -27,30 +23,40 @@ DEFAULT_WELCOME_TEXT_RU = (
     "Вместе с тобой мы будем наблюдать за процессом жизни."
 )
 
-DEFAULT_WELCOME_TEXT_EN = (
-    "Hello!\n\n"
-    'I am the "Icy" Moon bot 🌙\n\n'
-    "Together we will observe the flow of life."
-)
+
+async def _send_user_chat(
+    client: MaxClient,
+    user_id: int,
+    chat_id: int | None,
+    text: str,
+) -> None:
+    if not chat_id:
+        return
+    try:
+        await client.send_message(
+            user_id,
+            new_message_simple(text),
+            chat_id=chat_id,
+        )
+    except Exception:
+        log.exception("send user chat notice")
 
 
 async def send_welcome(
-    client: MaxClient, user_id: int, lang: str, *, chat_id: int | None = None
+    client: MaxClient, user_id: int, *, chat_id: int | None = None
 ) -> None:
-    if lang == "en":
-        setting = await get_setting("welcome_en")
-        base = DEFAULT_WELCOME_TEXT_EN
-    else:
-        setting = await get_setting("welcome_ru")
-        base = DEFAULT_WELCOME_TEXT_RU
-
-    text = setting["text"] if setting and setting["text"] else base
+    setting = await get_setting("welcome_ru")
+    text = (
+        setting["text"]
+        if setting and setting.get("text")
+        else DEFAULT_WELCOME_TEXT_RU
+    )
     photo_token = setting["photo_file_id"] if setting else None
 
     attachments: list[dict[str, Any]] = []
     if photo_token:
         attachments.append(image_attachment_token(photo_token))
-    attachments.extend(get_welcome_keyboard(lang))
+    attachments.extend(get_welcome_keyboard())
 
     await client.send_message(
         user_id,
@@ -64,18 +70,9 @@ async def handle_start_like(
 ) -> None:
     cid = recipient_chat_id(recipient)
     lang = await get_user_language(user_id)
-    if not lang:
-        await client.send_message(
-            user_id,
-            new_message_simple(
-                "Выберите язык / Choose the language",
-                attachments=get_language_keyboard(),
-            ),
-            chat_id=cid,
-        )
-        return
-
-    await send_welcome(client, user_id, lang, chat_id=cid)
+    if lang != "ru":
+        await set_user_language(user_id, "ru")
+    await send_welcome(client, user_id, chat_id=cid)
 
 
 async def on_user_text_message(client: MaxClient, message: dict[str, Any]) -> bool:
@@ -100,41 +97,52 @@ async def on_user_text_message(client: MaxClient, message: dict[str, Any]) -> bo
     return False
 
 
-async def on_language_callback(
+async def on_request_access_callback(
     client: MaxClient,
     callback_id: str,
     user_id: int,
-    payload: str,
+    user_obj: dict[str, Any],
     *,
     recipient: dict[str, Any] | None = None,
 ) -> None:
-    lang = "ru" if payload == "lang_ru" else "en"
-    await set_user_language(user_id, lang)
     cid = recipient_chat_id(recipient)
-    if cid:
-        await set_user_dialog_chat(user_id, cid)
-    await client.answer_callback(callback_id)
-    await send_welcome(client, user_id, lang, chat_id=cid)
-
-
-async def on_request_access_callback(
-    client: MaxClient, callback_id: str, user_id: int, user_obj: dict[str, Any]
-) -> None:
     try:
         req = await get_access_request(user_id)
 
         if req and req["status"] == "approved":
-            await client.answer_callback(callback_id, notification="Запрос уже одобрен.")
+            await client.answer_callback(
+                callback_id, notification="Доступ уже открыт."
+            )
+            await _send_user_chat(
+                client,
+                user_id,
+                cid,
+                "У вас уже есть доступ к боту.",
+            )
             return
 
         if req and req["status"] == "pending":
             await client.answer_callback(
-                callback_id, notification="Запрос уже направлен, ожидайте решения."
+                callback_id, notification="Запрос уже отправлен."
+            )
+            await _send_user_chat(
+                client,
+                user_id,
+                cid,
+                "Запрос уже отправлен администратору. Ожидайте решения.",
             )
             return
 
         if req and req["status"] == "rejected":
-            await client.answer_callback(callback_id, notification="Заявка была отклонена.")
+            await client.answer_callback(
+                callback_id, notification="Предыдущая заявка отклонена."
+            )
+            await _send_user_chat(
+                client,
+                user_id,
+                cid,
+                "Предыдущая заявка была отклонена. Если нужен доступ — напишите администратору.",
+            )
             return
 
         await set_access_request(user_id, "pending")
@@ -145,13 +153,10 @@ async def on_request_access_callback(
         ).strip() or "—"
         username = user_obj.get("username")
         username_str = f"@{username}" if username else "не указан"
-        user_lang = await get_user_language(user_id)
-        lang_str = (user_lang or "не выбран").upper()
         admin_text = (
             "Новый запрос:\n\n"
             f"Имя: {name}\n"
-            f"Username: {username_str}\n"
-            f"Язык: {lang_str}"
+            f"Username: {username_str}"
         )
 
         from config import ADMIN_IDS as ADM
@@ -170,7 +175,16 @@ async def on_request_access_callback(
                     admin_id,
                 )
 
-        await client.answer_callback(callback_id, notification="Заявка отправлена.")
+        await client.answer_callback(
+            callback_id, notification="Заявка отправлена."
+        )
+        await _send_user_chat(
+            client,
+            user_id,
+            cid,
+            "✅ Запрос отправлен администратору.\n\n"
+            "Ожидайте решения — здесь же придёт уведомление.",
+        )
     except Exception:
         log.exception("request_access")
         await client.answer_callback(

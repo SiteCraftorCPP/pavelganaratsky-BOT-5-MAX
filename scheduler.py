@@ -20,7 +20,7 @@ def _parse_send_time(send_time_str: str) -> datetime:
 
 async def check_and_send_messages(client: MaxClient):
     """
-    Расписание в БД — время МСК; рассылка пользователям по языку (как в TG-версии).
+    Расписание в БД — время МСК; рассылка по target_language (ru/all/both).
     Пересылка в отдельный чат не используется.
     """
 
@@ -43,6 +43,9 @@ async def check_and_send_messages(client: MaxClient):
             target_lang = msg["target_language"]
         except Exception:
             target_lang = "all"
+        # только русский контент: старые записи «только EN» не шлём
+        if target_lang == "en":
+            continue
 
         base_msk_time = _parse_send_time(msg["send_time"])
 

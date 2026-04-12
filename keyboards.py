@@ -1,25 +1,11 @@
 from max_client import inline_keyboard
 
 
-def get_welcome_keyboard(lang: str = "ru"):
+def get_welcome_keyboard():
     """Только кнопка заявки; админка — по команде /admin."""
-    text = "REQUEST" if lang == "en" else "ЗАПРОС"
     return [
         inline_keyboard(
-            [[{"type": "callback", "text": text, "payload": "request_access"}]]
-        )
-    ]
-
-
-def get_language_keyboard():
-    return [
-        inline_keyboard(
-            [
-                [
-                    {"type": "callback", "text": "🇷🇺 RU", "payload": "lang_ru"},
-                    {"type": "callback", "text": "🇬🇧 EN", "payload": "lang_en"},
-                ]
-            ]
+            [[{"type": "callback", "text": "ЗАПРОС", "payload": "request_access"}]]
         )
     ]
 

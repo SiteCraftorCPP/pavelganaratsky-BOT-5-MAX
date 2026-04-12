@@ -14,7 +14,6 @@ from database import (
     get_message,
     get_setting,
     get_user_dialog_chat,
-    get_user_language,
     set_access_request,
     set_setting,
     update_message,
@@ -117,7 +116,10 @@ async def on_admin_callback(
     if payload == "admin_edit_welcome":
         if mid:
             await edit_text(
-                client, mid, "Отправьте текст RU:", attachments=get_back_keyboard()
+                client,
+                mid,
+                "Отправьте текст приветствия:",
+                attachments=get_back_keyboard(),
             )
         set_state(user_id, "editing_welcome_text_ru")
         await client.answer_callback(callback_id)
@@ -132,7 +134,7 @@ async def on_admin_callback(
             await edit_text(
                 client,
                 mid,
-                "Введите текст сообщения RU:",
+                "Введите текст рассылки:",
                 attachments=get_back_keyboard(),
             )
         set_state(user_id, "waiting_for_message_text")
@@ -325,23 +327,16 @@ async def _approve_request(
         return
 
     await set_access_request(target_uid, "approved")
-    user_lang = await get_user_language(target_uid)
-    lang_str = (user_lang or "не выбран").upper()
     target_chat = await get_user_dialog_chat(target_uid)
 
     try:
-        if user_lang == "en":
-            await client.send_message(
-                target_uid,
-                new_message_simple("Subscription approved"),
-                chat_id=target_chat,
-            )
-        else:
-            await client.send_message(
-                target_uid,
-                new_message_simple("Подписка одобрена"),
-                chat_id=target_chat,
-            )
+        await client.send_message(
+            target_uid,
+            new_message_simple(
+                "Заявка одобрена. Можете пользоваться ботом — откройте меню или нажмите «Старт»."
+            ),
+            chat_id=target_chat,
+        )
     except Exception:
         await client.answer_callback(
             callback_id, notification="Не удалось отправить пользователю."
@@ -362,9 +357,7 @@ async def _approve_request(
         try:
             await client.send_message(
                 admin_id,
-                new_message_simple(
-                    prev_text + f"\n\n✅ Одобрено (язык: {lang_str})."
-                ),
+                new_message_simple(prev_text + "\n\n✅ Одобрено."),
             )
         except Exception:
             pass
@@ -397,8 +390,17 @@ async def _reject_request(
         return
 
     await set_access_request(target_uid, "rejected")
-    user_lang = await get_user_language(target_uid)
-    lang_str = (user_lang or "не выбран").upper()
+    target_chat = await get_user_dialog_chat(target_uid)
+    try:
+        await client.send_message(
+            target_uid,
+            new_message_simple(
+                "Заявка отклонена. Если это ошибка — свяжитесь с администратором."
+            ),
+            chat_id=target_chat,
+        )
+    except Exception:
+        log.exception("reject notify user")
 
     mid = message_mid(message) if message else None
     prev_text = message_body_text(message) if message else ""
@@ -412,9 +414,7 @@ async def _reject_request(
         try:
             await client.send_message(
                 admin_id,
-                new_message_simple(
-                    prev_text + f"\n\n❌ Отклонено (язык: {lang_str})."
-                ),
+                new_message_simple(prev_text + "\n\n❌ Отклонено."),
             )
         except Exception:
             pass
@@ -462,7 +462,7 @@ async def _admin_back(
             await edit_text(
                 client,
                 mid,
-                "Введите текст сообщения RU:",
+                "Введите текст рассылки:",
                 attachments=get_back_keyboard(),
             )
         await client.answer_callback(callback_id)
@@ -624,7 +624,7 @@ async def on_admin_message(client: MaxClient, message: dict[str, Any]) -> bool:
     if state == "editing_welcome_text_ru":
         update_data(user_id, welcome_text_ru=text)
         await st(
-            "Отправьте фото для RU или нажмите '-':",
+            "Пришлите фото для приветствия или «-», чтобы оставить текущее.",
             attachments=get_back_keyboard(),
         )
         set_state(user_id, "editing_welcome_photo_ru")
@@ -648,43 +648,9 @@ async def on_admin_message(client: MaxClient, message: dict[str, Any]) -> bool:
             )
             return True
         await set_setting("welcome_ru", text_ru, photo_ru)
-        await st(
-            "Отправьте текст EN:",
-            attachments=get_back_keyboard(),
-        )
-        set_state(user_id, "editing_welcome_text_en")
-        return True
-
-    if state == "editing_welcome_text_en":
-        update_data(user_id, welcome_text_en=text)
-        await st(
-            "Отправьте фото для EN или нажмите '-':",
-            attachments=get_back_keyboard(),
-        )
-        set_state(user_id, "editing_welcome_photo_en")
-        return True
-
-    if state == "editing_welcome_photo_en":
-        tok = first_image_token(message)
-        data = get_data(user_id)
-        text_en = data.get("welcome_text_en")
-        setting_en = await get_setting("welcome_en")
-        old_photo = setting_en["photo_file_id"] if setting_en else None
-        photo_en = old_photo
-        if tok:
-            photo_en = tok
-        elif text == "-":
-            photo_en = old_photo
-        else:
-            await st(
-                "Пришлите фото или '-' чтобы оставить текущее значение.",
-                attachments=get_back_keyboard(),
-            )
-            return True
-        await set_setting("welcome_en", text_en, photo_en)
         clear(user_id)
         await st(
-            "Приветствие (RU/EN) обновлено.",
+            "Приветствие обновлено.",
             attachments=get_admin_keyboard(),
         )
         return True
@@ -692,16 +658,7 @@ async def on_admin_message(client: MaxClient, message: dict[str, Any]) -> bool:
     if state == "waiting_for_message_text":
         update_data(user_id, text_ru=text)
         await st(
-            "Введите текст сообщения EN:",
-            attachments=get_back_keyboard(),
-        )
-        set_state(user_id, "waiting_for_message_lang")
-        return True
-
-    if state == "waiting_for_message_lang":
-        update_data(user_id, text_en=text)
-        await st(
-            "Введите дату отправки:",
+            "Введите дату отправки (ДД.ММ):",
             attachments=get_back_keyboard(),
         )
         set_state(user_id, "waiting_for_message_date")
@@ -724,17 +681,15 @@ async def on_admin_message(client: MaxClient, message: dict[str, Any]) -> bool:
     if state == "waiting_for_message_time":
         data = get_data(user_id)
         msg_text_ru = data["text_ru"]
-        msg_text_en = data["text_en"]
         msg_date = data["date"]
         msg_time = text
         try:
             current_year = datetime.now().year
             dt_str = f"{current_year}.{msg_date} {msg_time}"
             dt = datetime.strptime(dt_str, "%Y.%d.%m %H:%M")
-            await add_message(msg_text_ru, dt, "ru")
-            await add_message(msg_text_en, dt, "en")
+            await add_message(msg_text_ru, dt, "all")
             await st(
-                f"Сообщения добавлены:\nRU: {msg_text_ru}\nEN: {msg_text_en}\n{dt.strftime('%d.%m.%Y %H:%M')}",
+                f"Сообщение добавлено:\n{msg_text_ru}\n\n{dt.strftime('%d.%m.%Y %H:%M')} (МСК)",
                 attachments=get_admin_keyboard(),
             )
             clear(user_id)
