@@ -6,6 +6,7 @@ from typing import Any
 from database import (
     get_access_request,
     get_setting,
+    get_user_dialog_chat,
     get_user_language,
     set_access_request,
     set_user_dialog_chat,
@@ -145,6 +146,18 @@ async def on_request_access_callback(
             )
             return
 
+        from config import ADMIN_IDS as ADM
+
+        if not ADM:
+            log.error(
+                "ADMIN_IDS пуст — в .env укажите числовые user_id админов через запятую."
+            )
+            await client.answer_callback(
+                callback_id,
+                notification="Бот не настроен (список админов пуст).",
+            )
+            return
+
         await set_access_request(user_id, "pending")
 
         name = (
@@ -159,19 +172,19 @@ async def on_request_access_callback(
             f"Username: {username_str}"
         )
 
-        from config import ADMIN_IDS as ADM
-
         kb = get_request_actions_keyboard(user_id)
         for admin_id in ADM:
+            admin_chat = await get_user_dialog_chat(admin_id)
             res = await client.send_message(
                 admin_id,
                 new_message_simple(admin_text, attachments=kb),
+                chat_id=admin_chat,
                 raise_for_status=False,
             )
             if res is None:
                 log.warning(
                     "Не удалось отправить уведомление админу %s "
-                    "(часто 404: пользователь ещё не открывал чат с ботом).",
+                    "(часто: неверный ADMIN_IDS или админ ни разу не писал боту — нужен хотя бы /start или /admin в чате).",
                     admin_id,
                 )
 

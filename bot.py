@@ -99,22 +99,30 @@ async def handle_update(client: MaxClient, update: dict) -> None:
         callback_id = cb.get("callback_id")
         payload = cb.get("payload") or ""
         user_obj = cb.get("user") or {}
-        uid = user_obj.get("user_id")
+        raw_uid = user_obj.get("user_id") if user_obj else None
+        if raw_uid is None and user_obj:
+            raw_uid = user_obj.get("id")
         msg = update.get("message")
-        if callback_id is None or uid is None:
+        if callback_id is None or raw_uid is None:
+            return
+
+        try:
+            uid = int(raw_uid)
+        except (TypeError, ValueError):
+            log.warning("message_callback: неверный user_id: %r", raw_uid)
             return
 
         if msg:
             mr = msg.get("recipient") or {}
             mcid = recipient_chat_id(mr)
             if mcid:
-                await set_user_dialog_chat(int(uid), mcid)
+                await set_user_dialog_chat(uid, mcid)
 
         if payload == "request_access":
             await user_flow.on_request_access_callback(
                 client,
                 callback_id,
-                int(uid),
+                uid,
                 user_obj,
                 recipient=msg.get("recipient") if msg else None,
             )

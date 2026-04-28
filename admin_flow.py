@@ -355,9 +355,11 @@ async def _approve_request(
         if admin_id == admin_user_id:
             continue
         try:
+            achat = await get_user_dialog_chat(admin_id)
             await client.send_message(
                 admin_id,
                 new_message_simple(prev_text + "\n\n✅ Одобрено."),
+                chat_id=achat,
             )
         except Exception:
             pass
@@ -412,9 +414,11 @@ async def _reject_request(
         if admin_id == admin_user_id:
             continue
         try:
+            achat = await get_user_dialog_chat(admin_id)
             await client.send_message(
                 admin_id,
                 new_message_simple(prev_text + "\n\n❌ Отклонено."),
+                chat_id=achat,
             )
         except Exception:
             pass
