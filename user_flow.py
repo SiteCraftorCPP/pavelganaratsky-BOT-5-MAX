@@ -47,11 +47,7 @@ async def send_welcome(
     client: MaxClient, user_id: int, *, chat_id: int | None = None
 ) -> None:
     setting = await get_setting("welcome_ru")
-    text = (
-        setting["text"]
-        if setting and setting.get("text")
-        else DEFAULT_WELCOME_TEXT_RU
-    )
+    text = setting["text"] if setting and setting["text"] else DEFAULT_WELCOME_TEXT_RU
     photo_token = setting["photo_file_id"] if setting else None
 
     attachments: list[dict[str, Any]] = []
