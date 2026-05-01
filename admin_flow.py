@@ -333,7 +333,7 @@ async def _approve_request(
         await client.send_message(
             target_uid,
             new_message_simple(
-                "Заявка одобрена. Можете пользоваться ботом — откройте меню или нажмите «Старт»."
+                "Заявка одобрена. Теперь бот работает👌"
             ),
             chat_id=target_chat,
         )
