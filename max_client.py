@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import ssl
 from typing import Any
 
 import httpx
@@ -23,13 +24,25 @@ def recipient_chat_id(recipient: dict[str, Any] | None) -> int | None:
 
 
 class MaxClient:
-    def __init__(self, token: str, base_url: str):
+    def __init__(
+        self,
+        token: str,
+        base_url: str,
+        *,
+        ssl_verify: bool | str | ssl.SSLContext = True,
+    ):
         self._token = token
         self._base = base_url.rstrip("/")
         self._headers = {"Authorization": self._token, "Content-Type": "application/json"}
+        self._ssl_verify = ssl_verify
 
     def _client(self) -> httpx.AsyncClient:
-        return httpx.AsyncClient(base_url=self._base, headers=self._headers, timeout=120.0)
+        return httpx.AsyncClient(
+            base_url=self._base,
+            headers=self._headers,
+            timeout=120.0,
+            verify=self._ssl_verify,
+        )
 
     async def get_me(self) -> dict[str, Any]:
         async with self._client() as c:
@@ -131,7 +144,7 @@ class MaxClient:
             return r.json()
 
     async def upload_photo_binary(self, upload_url: str, data: bytes, filename: str) -> Any:
-        async with httpx.AsyncClient(timeout=120.0) as c:
+        async with httpx.AsyncClient(timeout=120.0, verify=self._ssl_verify) as c:
             r = await c.post(
                 upload_url,
                 files={"data": (filename, data)},

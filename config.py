@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 MAX_BOT_TOKEN = (os.getenv("MAX_BOT_TOKEN") or "").strip()
-MAX_API_BASE = (os.getenv("MAX_API_BASE") or "https://platform-api.max.ru").rstrip("/")
+MAX_API_BASE = (os.getenv("MAX_API_BASE") or "https://platform-api2.max.ru").rstrip("/")
 
 _raw_admins = os.getenv("ADMIN_IDS", "")
 

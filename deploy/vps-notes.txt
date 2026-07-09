@@ -12,6 +12,14 @@ VPS: изоляция и автозапуск
    python3 -m venv .venv
    .venv/bin/pip install -r requirements.txt
    cp env.example .env && nano .env
+   В .env обязательно:
+     MAX_API_BASE=https://platform-api2.max.ru
+     MAX_SSL_VERIFY=1
+   Сертификаты НУЦ Минцифры уже лежат в certs/ — бот подхватит их автоматически.
+   Дополнительно на VPS можно установить их в систему (не обязательно, но полезно):
+     sudo mkdir -p /usr/local/share/ca-certificates/russian-trusted
+     sudo cp certs/russian_trusted_root_ca.pem certs/russian_trusted_sub_ca.pem /usr/local/share/ca-certificates/russian-trusted/
+     sudo update-ca-certificates -v
 
 3) systemd (падение/убийство процесса — перезапуск):
    sudo cp deploy/pavelganaratsky-bot-max.service.example /etc/systemd/system/pavelganaratsky-bot-max.service
@@ -22,3 +30,6 @@ VPS: изоляция и автозапуск
 
 4) Логи:
    journalctl -u pavelganaratsky-bot-max -f
+
+5) Проверка API после деплоя (подставьте токен из .env):
+   curl --cacert certs/russian_trusted_bundle.pem https://platform-api2.max.ru/me -H "Authorization: TOKEN"

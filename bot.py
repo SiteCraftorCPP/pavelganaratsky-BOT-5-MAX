@@ -12,6 +12,7 @@ from config import (
 )
 from database import get_meta, init_db, seed_march_if_needed, set_meta, set_user_dialog_chat
 from max_client import MaxClient, recipient_chat_id
+from ssl_context import build_max_ssl_verify
 from max_messages import actor_user_id, is_from_user, message_body_text
 import admin_flow
 import user_flow
@@ -153,7 +154,7 @@ async def main():
     await init_db()
     await seed_march_if_needed()
 
-    client = MaxClient(MAX_BOT_TOKEN, MAX_API_BASE)
+    client = MaxClient(MAX_BOT_TOKEN, MAX_API_BASE, ssl_verify=build_max_ssl_verify())
 
     try:
         me = await client.get_me()
